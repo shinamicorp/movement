@@ -2,6 +2,7 @@ services:
   setup:
     image: ghcr.io/movementlabsxyz/suzuka-full-node-setup:${CONTAINER_REV}
     container_name: setup
+    entrypoint: ["sh", "-c", "/app/suzuka-full-node-setup & until nc -zv 0.0.0.0 8090 > /dev/null; do echo Waiting for setup.; sleep 60; done;"]
     environment:
       DOT_MOVEMENT_PATH: /.movement
       # By default, all the listener hostnames and ports are reasonable.
@@ -18,9 +19,6 @@ services:
       MAYBE_RUN_LOCAL: "true"
       MAYBE_DEPLOY_MCR: "true"
       INDEXER_PROCESSOR_POSTGRES_CONNECTION_STRING: postgres://postgres:password@postgres:5432/postgres
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      AWS_REGION: ${AWS_DEFAULT_REGION}
     volumes:
       - ${DOT_MOVEMENT_PATH}:/.movement
     ports:
@@ -41,7 +39,7 @@ services:
       - ${DOT_MOVEMENT_PATH}:/.movement
     depends_on:
       setup:
-        condition: service_healthy
+        condition: service_completed_successfully
     ports:
       - "26657:26657"
       - "9090:9090"
@@ -63,7 +61,7 @@ services:
       - "26658:26658"
     depends_on:
       setup:
-        condition: service_healthy
+        condition: service_completed_successfully
       m1-da-light-node-celestia-appd:
         condition: service_healthy
     healthcheck:
@@ -99,7 +97,7 @@ services:
       - ${DOT_MOVEMENT_PATH}:/.movement
     depends_on:
       setup:
-        condition: service_healthy
+        condition: service_completed_successfully
       m1-da-light-node-celestia-bridge:
         condition: service_healthy
     ports:
