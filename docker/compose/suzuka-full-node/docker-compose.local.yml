@@ -2,7 +2,7 @@ services:
   setup:
     image: ghcr.io/movementlabsxyz/suzuka-full-node-setup:${CONTAINER_REV}
     container_name: setup
-    entrypoint: ["sh", "-c", "/app/suzuka-full-node-setup & until nc -zv 0.0.0.0 8090 > /dev/null; do echo Waiting for setup.; sleep 60; done;"]
+    entrypoint: ["sh", "-c", "/app/suzuka-full-node-setup & until nc -zv 0.0.0.0 8090 > /dev/null; do echo Waiting for setup.; sleep infinity; done;"]
     environment:
       DOT_MOVEMENT_PATH: /.movement
       # By default, all the listener hostnames and ports are reasonable.
