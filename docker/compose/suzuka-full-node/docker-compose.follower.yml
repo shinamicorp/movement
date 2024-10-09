@@ -6,13 +6,21 @@ services:
       DOT_MOVEMENT_PATH: /.movement
       # needs to have a connection to the m1-da-light-node
       M1_DA_LIGHT_NODE_CONNECTION_PROTOCOL: https
-      M1_DA_LIGHT_NODE_CONNECTION_HOSTNAME: m1-da-light-node
+      M1_DA_LIGHT_NODE_CONNECTION_HOSTNAME: l-monninger.open-network.m1-da-light-node.suzuka.devnet.movementlabs.xyz
       M1_DA_LIGHT_NODE_CONNECTION_PORT: 443
-      INDEXER_PROCESSOR_POSTGRES_CONNECTION_STRING: postgres://postgres:password@postgres:5432/postgres
+      CELESTIA_RPC_CONNECTION_PROTOCOL: https
+      CELESTIA_RPC_CONNECTION_HOSTNAME: l-monninger.open-network.rpc.celestia.suzuka.devnet.movementlabs.xyz
+      CELESTIA_RPC_CONNECTION_PORT: 443
+      CELESTIA_WEBSOCKET_CONNECTION_PROTOCOL: wss
+      CELESTIA_WEBSOCKET_CONNECTION_HOSTNAME: l-monninger.open-network.ws.celestia.suzuka.devnet.movementlabs.xyz
+      CELESTIA_WEBSOCKET_CONNECTION_PORT: 443
+      ETH_RPC_CONNECTION_PROTOCOL: https
+      ETH_RPC_CONNECTION_HOSTNAME: ethereum-holesky-rpc.publicnode.com
+      ETH_RPC_CONNECTION_PORT: 443
       AWS_REGION: us-west-1
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      MOVEMENT_SYNC: leader::follower-test-$RANDOM<=>{maptos,maptos-storage,suzuka-da-db}/**
+      MOVEMENT_SYNC: follower::l-monninger-open-network-suzuka-devnet-l-sync<=>{maptos,maptos-storage,suzuka-da-db}/**
       MAYBE_RUN_LOCAL: "false"
     volumes:
       - ${DOT_MOVEMENT_PATH}:/.movement
@@ -57,11 +65,99 @@ services:
       celestia-light-node:
         condition: service_healthy
 
+  m1-da-light-node-celestia-appd:
+    image: ghcr.io/movementlabsxyz/m1-da-light-node-celestia-appd:${CONTAINER_REV}
+    container_name: m1-da-light-node-celestia-appd
+    environment:
+      DOT_MOVEMENT_PATH: /.movement
+      CELESTIA_RPC_ADDRESS: m1-da-light-node-celestia-appd:26657
+      M1_DA_LIGHT_NODE_CONNECTION_PROTOCOL: https
+      M1_DA_LIGHT_NODE_CONNECTION_HOSTNAME: l-monninger.open-network.m1-da-light-node.suzuka.devnet.movementlabs.xyz
+      M1_DA_LIGHT_NODE_CONNECTION_PORT: 443
+      CELESTIA_RPC_CONNECTION_PROTOCOL: https
+      CELESTIA_RPC_CONNECTION_HOSTNAME: l-monninger.open-network.rpc.celestia.suzuka.devnet.movementlabs.xyz
+      CELESTIA_RPC_CONNECTION_PORT: 443
+      CELESTIA_WEBSOCKET_CONNECTION_PROTOCOL: wss
+      CELESTIA_WEBSOCKET_CONNECTION_HOSTNAME: l-monninger.open-network.ws.celestia.suzuka.devnet.movementlabs.xyz
+      CELESTIA_WEBSOCKET_CONNECTION_PORT: 443
+      ETH_RPC_CONNECTION_PROTOCOL: https
+      ETH_RPC_CONNECTION_HOSTNAME: ethereum-holesky-rpc.publicnode.com
+      ETH_RPC_CONNECTION_PORT: 443
+      AWS_REGION: us-west-1
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      MOVEMENT_SYNC: follower::l-monninger-open-network-suzuka-devnet-l-sync<=>{maptos,maptos-storage,suzuka-da-db}/**
+      MOVEMENT_TIMING: info
+      SUZUKA_TIMING_LOG: /.movement/suzuka-timing.log
+      RUST_BACKTRACE: 1
+    volumes:
+      - ${DOT_MOVEMENT_PATH}:/.movement
+    depends_on:
+      setup:
+        condition: service_healthy
+    ports:
+      - "26657:26657"
+      - "9090:9090"
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -zv 0.0.0.0 26657" ]
+      retries: 10
+      interval: 10s
+      timeout: 5s
+    restart: on-failure:3
+
+  m1-da-light-node-celestia-bridge:
+    image: ghcr.io/movementlabsxyz/m1-da-light-node-celestia-bridge:${CONTAINER_REV}
+    container_name: m1-da-light-node-celestia-bridge
+    environment:
+      DOT_MOVEMENT_PATH: /.movement
+      M1_DA_LIGHT_NODE_CONNECTION_PROTOCOL: https
+      M1_DA_LIGHT_NODE_CONNECTION_HOSTNAME: l-monninger.open-network.m1-da-light-node.suzuka.devnet.movementlabs.xyz
+      M1_DA_LIGHT_NODE_CONNECTION_PORT: 443
+      CELESTIA_RPC_CONNECTION_PROTOCOL: https
+      CELESTIA_RPC_CONNECTION_HOSTNAME: l-monninger.open-network.rpc.celestia.suzuka.devnet.movementlabs.xyz
+      CELESTIA_RPC_CONNECTION_PORT: 443
+      CELESTIA_WEBSOCKET_CONNECTION_PROTOCOL: wss
+      CELESTIA_WEBSOCKET_CONNECTION_HOSTNAME: l-monninger.open-network.ws.celestia.suzuka.devnet.movementlabs.xyz
+      CELESTIA_WEBSOCKET_CONNECTION_PORT: 443
+      ETH_RPC_CONNECTION_PROTOCOL: https
+      ETH_RPC_CONNECTION_HOSTNAME: ethereum-holesky-rpc.publicnode.com
+      ETH_RPC_CONNECTION_PORT: 443
+      AWS_REGION: us-west-1
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      MOVEMENT_SYNC: follower::l-monninger-open-network-suzuka-devnet-l-sync<=>{maptos,maptos-storage,suzuka-da-db}/**
+      MOVEMENT_TIMING: info
+      SUZUKA_TIMING_LOG: /.movement/suzuka-timing.log
+      RUST_BACKTRACE: 1
+    volumes:
+      - ${DOT_MOVEMENT_PATH}:/.movement
+    ports:
+      - "26658:26658"
+    depends_on:
+      setup:
+        condition: service_healthy
+      m1-da-light-node-celestia-appd:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -zv 0.0.0.0 26658" ]
+      retries: 10
+      interval: 10s
+      timeout: 5s
+    restart: on-failure:3
+  
   # turn off m1-da-light-node
   m1-da-light-node:
-    image: ghcr.io/movementlabsxyz/suzuka-full-node:${CONTAINER_REV}
+    image: busybox
     container_name: m1-da-light-node
     command: sleep infinity
+    depends_on:
+      m1-da-light-node-celestia-bridge:
+        condition: service_healthy
+    environment:
+      - DOT_MOVEMENT_PATH=/.movement
+      - RUST_BACKTRACE=1
+    volumes:
+      - ${DOT_MOVEMENT_PATH}:/.movement
     healthcheck:
       test: [ "CMD-SHELL", "echo 'health check'" ]
       retries: 3
@@ -69,10 +165,57 @@ services:
 
   # turn off suzuka-faucet-service
   suzuka-faucet-service:
-    image: ghcr.io/movementlabsxyz/suzuka-faucet-service:${CONTAINER_REV}
+    image: busybox
     container_name: suzuka-faucet-service
     command: sleep infinity
+    environment:
+      - DOT_MOVEMENT_PATH=/.movement
+      - RUST_BACKTRACE=1
+    volumes:
+      - ${DOT_MOVEMENT_PATH}:/.movement
     healthcheck:
       test: [ "CMD-SHELL", "echo 'health check'" ]
       retries: 3
       start_period: 3s
+
+  suzuka-full-node:
+    image: ghcr.io/movementlabsxyz/suzuka-full-node:${CONTAINER_REV}
+    container_name: suzuka-full-node
+    environment:
+      # needs to have a connection to the m1-da-light-node
+      M1_DA_LIGHT_NODE_CONNECTION_PROTOCOL: https
+      M1_DA_LIGHT_NODE_CONNECTION_HOSTNAME: l-monninger.open-network.m1-da-light-node.suzuka.devnet.movementlabs.xyz
+      M1_DA_LIGHT_NODE_CONNECTION_PORT: 443
+      CELESTIA_RPC_CONNECTION_PROTOCOL: https
+      CELESTIA_RPC_CONNECTION_HOSTNAME: l-monninger.open-network.rpc.celestia.suzuka.devnet.movementlabs.xyz
+      CELESTIA_RPC_CONNECTION_PORT: 443
+      CELESTIA_WEBSOCKET_CONNECTION_PROTOCOL: wss
+      CELESTIA_WEBSOCKET_CONNECTION_HOSTNAME: l-monninger.open-network.ws.celestia.suzuka.devnet.movementlabs.xyz
+      CELESTIA_WEBSOCKET_CONNECTION_PORT: 443
+      ETH_RPC_CONNECTION_PROTOCOL: https
+      ETH_RPC_CONNECTION_HOSTNAME: ethereum-holesky-rpc.publicnode.com
+      ETH_RPC_CONNECTION_PORT: 443
+      AWS_REGION: us-west-1
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      MOVEMENT_SYNC: follower::l-monninger-open-network-suzuka-devnet-l-sync<=>{maptos,maptos-storage,suzuka-da-db}/**
+      DOT_MOVEMENT_PATH: /.movement
+      MOVEMENT_TIMING: info
+      SUZUKA_TIMING_LOG: /.movement/suzuka-timing.log
+      RUST_BACKTRACE: 1
+    volumes:
+      - ${DOT_MOVEMENT_PATH}:/.movement
+    depends_on:
+      m1-da-light-node:
+        condition: service_healthy
+      setup:
+        condition: service_healthy
+    ports:
+      - "30731:30731"
+      - "30734:30734"
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -zv 0.0.0.0 30731" ]
+      retries: 10
+      interval: 10s
+      timeout: 5s
+    restart: on-failure:5
