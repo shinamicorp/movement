@@ -76,6 +76,7 @@ services:
     ports:
       - "30731:30731"
       - "30734:30734"
+      - "8080:30731"
     healthcheck:
       test: [ "CMD-SHELL", "nc -zv 0.0.0.0 30731" ]
       retries: 10
